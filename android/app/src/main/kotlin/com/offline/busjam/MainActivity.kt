@@ -38,7 +38,6 @@ class MainActivity : Activity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableImmersiveFullscreen()
 
         val assetLoader = WebViewAssetLoader.Builder()
             .setDomain("appassets.androidplatform.net")
@@ -79,6 +78,8 @@ class MainActivity : Activity() {
         }
 
         setContentView(webView)
+        // Accessing window.insetsController before the decor view exists can crash on Android 11+.
+        enableImmersiveFullscreen()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

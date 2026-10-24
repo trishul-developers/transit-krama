@@ -10,7 +10,7 @@ GitHub repository: [trishul-developers/transit-krama](https://github.com/trishul
 
 - `webapp/` — Browser/PWA app and shared runtime resources.
 - `android/` — Android WebView wrapper, launcher resources, and Gradle build.
-- `android/version.properties` — Shared Android release version (`0.1.1`).
+- `android/version.properties` — Shared Android release version (`0.1.2`).
 - `android/store_assets/` — Store artwork and screenshots.
 
 ## Build locally
@@ -36,4 +36,4 @@ See [GitHub Actions](https://github.com/trishul-developers/transit-krama/actions
 [Releases](https://github.com/trishul-developers/transit-krama/releases) for published downloads.
 
 Release version is set in `android/version.properties` and the release tag must match it, for
-example `v0.1.1`.
+example `v0.1.2`.
