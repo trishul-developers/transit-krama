@@ -56,9 +56,15 @@ jobs:
           test -s "$RUNNER_TEMP/transit-krama-upload.jks"
 
       - name: Run Android unit tests and build release APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        working-directory: android
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+
+      - name: Run Android unit tests and build signed release APK
+        if: startsWith(github.ref, 'refs/tags/')
         working-directory: android
         env:
-          ANDROID_KEYSTORE_PATH: ${{ startsWith(github.ref, 'refs/tags/') && format('{0}/transit-krama-upload.jks', runner.temp) || '' }}
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/transit-krama-upload.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
