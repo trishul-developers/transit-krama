@@ -1,0 +1,68 @@
+name: Build and release
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Verify tag matches app version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          source android/version.properties
+          expected="v${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+          test "$GITHUB_REF_NAME" = "$expected" || {
+            echo "Tag $GITHUB_REF_NAME does not match $expected" >&2
+            exit 1
+          }
+
+      - name: Run Android unit tests and build release APK
+        working-directory: android
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+
+      - name: Package web app
+        shell: bash
+        run: |
+          source android/version.properties
+          version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+          zip -r "transit-krama-webapp-${version}.zip" webapp
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: transit-krama-${{ github.ref_name }}
+          path: |
+            android/app/build/outputs/apk/release/*.apk
+            transit-krama-webapp-*.zip
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            android/app/build/outputs/apk/release/*.apk
+            transit-krama-webapp-*.zip
