@@ -10,7 +10,7 @@ GitHub repository: [trishul-developers/transit-krama](https://github.com/trishul
 
 - `webapp/` — Browser/PWA app and shared runtime resources.
 - `android/` — Android WebView wrapper, launcher resources, and Gradle build.
-- `android/version.properties` — Shared Android release version (`0.1.0`).
+- `android/version.properties` — Shared Android release version (`0.1.1`).
 - `android/store_assets/` — Store artwork and screenshots.
 
 ## Build locally
@@ -22,16 +22,18 @@ build the Android app. From the repository root, run:
 android\gradlew.bat -p android testReleaseUnitTest assembleRelease
 ```
 
-The release APK is written to `android/app/build/outputs/apk/release/`.
+The release APK is written to `android/app/build/outputs/apk/release/` as
+`transit-krama-<version>-release.apk`.
 
 ## Release CI
 
 Pull requests and pushes to `main` build and test the Android release APK and package the web app.
-Pushing a `v*` tag builds both and publishes them as GitHub Release assets. The Android artifact is
-unsigned; sign it with your distribution keystore before publishing to an app store.
+Pushing a `v*` tag builds and signs the Android APK with the configured Actions secrets, packages
+the web app, and publishes both as GitHub Release assets. The APK is named
+`transit-krama-<version>-release.apk`.
 
 See [GitHub Actions](https://github.com/trishul-developers/transit-krama/actions) for CI runs and
 [Releases](https://github.com/trishul-developers/transit-krama/releases) for published downloads.
 
 Release version is set in `android/version.properties` and the release tag must match it, for
-example `v0.1.0`.
+example `v0.1.1`.
