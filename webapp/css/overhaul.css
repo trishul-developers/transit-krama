@@ -931,6 +931,17 @@ body {
   color: #a7f3d0 !important;
 }
 
+#speedBtnFace.is-fast {
+  border-color: rgba(52, 211, 153, .42) !important;
+  background: linear-gradient(180deg, rgba(6,95,70,.96), rgba(5,78,61,.98)) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 0 18px rgba(52,211,153,.12) !important;
+}
+
+#speedBtnBadge.is-fast,
+#speedBtnTitle.is-fast {
+  color: #d1fae5 !important;
+}
+
 /* MODALS */
 #victoryModal,
 #rescueModal,
