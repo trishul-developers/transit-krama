@@ -271,17 +271,10 @@ function updateGameHud() {
   const speedFace = document.getElementById("speedBtnFace");
   const speedBadge = document.getElementById("speedBtnBadge");
   const speedTitle = document.getElementById("speedBtnTitle");
-  if (isFastForward) {
-    speedFace.className = "bg-emerald-500 border border-emerald-300 rounded-[9px] h-[52px] flex flex-col items-center justify-between py-1 px-1";
-    speedTitle.className = "text-[9px] font-extrabold text-white leading-none";
-    speedBadge.className = "px-1.5 py-[1px] rounded bg-emerald-800 text-[8.5px] font-black text-white";
-    speedBadge.textContent = "3x";
-  } else {
-    speedFace.className = "bg-slate-50 border border-slate-200 rounded-[9px] h-[52px] flex flex-col items-center justify-between py-1 px-1";
-    speedTitle.className = "text-[9px] font-extrabold text-slate-800 leading-none";
-    speedBadge.className = "px-1.5 py-[1px] rounded bg-sky-100 text-[8.5px] font-black text-sky-700";
-    speedBadge.textContent = "1x";
-  }
+  speedFace.classList.toggle("is-fast", isFastForward);
+  speedBadge.classList.toggle("is-fast", isFastForward);
+  speedTitle.classList.toggle("is-fast", isFastForward);
+  speedBadge.textContent = isFastForward ? "3x" : "1x";
 }
 
 function openForecastModal() {
