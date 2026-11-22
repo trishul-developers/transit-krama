@@ -1,0 +1,351 @@
+/* Transit Krama Experience Overhaul v1
+   Visual system layered on top of the offline utility stylesheet. */
+:root {
+  --tk-ink: #07111f;
+  --tk-panel: rgba(10, 20, 35, 0.92);
+  --tk-panel-2: rgba(17, 31, 50, 0.88);
+  --tk-line: rgba(148, 163, 184, 0.20);
+  --tk-cyan: #22d3ee;
+  --tk-sky: #38bdf8;
+  --tk-emerald: #34d399;
+  --tk-gold: #fbbf24;
+  --tk-danger: #fb7185;
+  --tk-radius: 18px;
+  --tk-shadow: 0 18px 50px rgba(2, 8, 23, 0.38);
+}
+
+html, body {
+  overscroll-behavior: none;
+  background:
+    radial-gradient(1100px 620px at 50% -12%, rgba(14, 165, 233, 0.18), transparent 58%),
+    radial-gradient(900px 580px at 95% 110%, rgba(16, 185, 129, 0.12), transparent 55%),
+    #050b14;
+}
+
+body {
+  letter-spacing: -0.01em;
+}
+
+#appRoot {
+  isolation: isolate;
+  background: #0a1321 !important;
+  box-shadow:
+    0 34px 90px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255,255,255,0.04) inset !important;
+}
+
+#homeScreen {
+  position: relative;
+  background:
+    radial-gradient(900px 480px at 50% -8%, rgba(56,189,248,0.19), transparent 62%),
+    radial-gradient(740px 500px at 100% 100%, rgba(52,211,153,0.12), transparent 62%),
+    linear-gradient(180deg, #0b1524 0%, #09111e 52%, #070d17 100%) !important;
+  padding-top: max(1rem, env(safe-area-inset-top)) !important;
+  padding-bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+}
+
+#homeScreen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: .28;
+  background-image:
+    linear-gradient(rgba(255,255,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.018) 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 72%);
+}
+
+#heroBannerImg {
+  filter: saturate(1.08) contrast(1.06) brightness(.92);
+  transform: scale(1.01);
+}
+
+#homeScreen > div:nth-child(2) {
+  border-color: rgba(125, 211, 252, .20) !important;
+  background: linear-gradient(180deg, rgba(18,34,55,.96), rgba(10,20,34,.96)) !important;
+  box-shadow:
+    0 24px 56px rgba(2, 8, 23, .34),
+    0 1px 0 rgba(255,255,255,.05) inset !important;
+}
+
+#btnPlayCurrentLevel,
+#btnResumeGame,
+#btnNextLevel {
+  transform: translateZ(0);
+}
+
+#btnPlayCurrentLevel {
+  animation: tkPlayBreath 2.9s ease-in-out infinite !important;
+}
+
+#btnPlayCurrentLevel > div {
+  min-height: 52px;
+  background: linear-gradient(135deg, #10b981 0%, #06b6d4 100%) !important;
+  border: 1px solid rgba(207, 250, 254, .55) !important;
+  box-shadow:
+    0 11px 28px rgba(6,182,212,.19),
+    0 1px 0 rgba(255,255,255,.30) inset;
+}
+
+#btnResumeGame > div {
+  background: linear-gradient(135deg, #0891b2, #2563eb) !important;
+}
+
+#homeStreakPill > div {
+  background: linear-gradient(135deg, #f97316, #f59e0b) !important;
+  box-shadow: 0 8px 22px rgba(249,115,22,.22);
+}
+
+#btnHomeNightToggle > div,
+#btnHomeSettings > div {
+  background: rgba(15, 28, 46, .88) !important;
+  border-color: rgba(148,163,184,.25) !important;
+  box-shadow: 0 8px 20px rgba(2,8,23,.20);
+}
+
+#levelGridContainer {
+  padding: 4px 2px 16px;
+  scrollbar-gutter: stable;
+}
+
+#levelGridContainer > button {
+  min-height: 52px;
+  border-radius: 14px !important;
+  border-color: rgba(148,163,184,.18) !important;
+  box-shadow:
+    0 8px 18px rgba(2,8,23,.14),
+    0 1px 0 rgba(255,255,255,.035) inset;
+}
+
+#gameScreen {
+  position: relative;
+  background: #07101c;
+}
+
+#hudTopBar {
+  min-height: 54px;
+  padding-top: max(.48rem, env(safe-area-inset-top)) !important;
+  padding-bottom: .45rem !important;
+  background:
+    linear-gradient(180deg, rgba(8,18,31,.96), rgba(8,18,31,.87)) !important;
+  border-bottom: 1px solid rgba(125,211,252,.14) !important;
+  box-shadow:
+    0 10px 30px rgba(2,8,23,.28),
+    0 1px 0 rgba(255,255,255,.04) inset !important;
+  backdrop-filter: blur(16px) saturate(1.15);
+  -webkit-backdrop-filter: blur(16px) saturate(1.15);
+}
+
+#hudLevelLip,
+#btnOpenForecast,
+#btnBackToHome,
+#btnHint,
+#btnRestartLevel,
+#btnGameSettings,
+#btnNightMode {
+  background: transparent !important;
+  padding-bottom: 0 !important;
+}
+
+#hudLevelFace,
+#btnOpenForecast > div,
+#btnBackToHome > div,
+#btnHint > div,
+#btnRestartLevel > div,
+#btnGameSettings > div,
+#btnNightMode > div {
+  border-color: rgba(148,163,184,.20) !important;
+  box-shadow:
+    0 6px 16px rgba(2,8,23,.18),
+    0 1px 0 rgba(255,255,255,.05) inset;
+}
+
+#hudLevelFace {
+  background: linear-gradient(135deg, rgba(14,165,233,.93), rgba(37,99,235,.94)) !important;
+}
+
+#btnOpenForecast > div,
+#btnBackToHome > div,
+#btnRestartLevel > div,
+#btnGameSettings > div,
+#btnNightMode > div {
+  background: rgba(17,31,50,.92) !important;
+  color: #e5edf7 !important;
+}
+
+#btnOpenForecast #hudQueueCountText {
+  color: #f8fafc !important;
+}
+
+#btnOpenForecast #hudQueueProgressBar {
+  background: linear-gradient(90deg, #22d3ee, #34d399) !important;
+}
+
+#btnHint > div {
+  background: linear-gradient(180deg, rgba(251,191,36,.23), rgba(146,64,14,.18)) !important;
+}
+
+#canvasContainer {
+  position: relative;
+  background: #dce7ed;
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.07) inset,
+    0 -1px 0 rgba(2,8,23,.18) inset;
+}
+
+#canvasContainer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow:
+    inset 0 18px 28px rgba(2,8,23,.06),
+    inset 0 -24px 38px rgba(2,8,23,.08);
+  z-index: 8;
+}
+
+#gameCanvas {
+  touch-action: none;
+  cursor: pointer;
+  transform: translateZ(0);
+  will-change: contents;
+}
+
+#gameToast {
+  top: 10px !important;
+  max-width: calc(100% - 24px);
+  border-color: rgba(125,211,252,.24) !important;
+  background: rgba(6,15,27,.90) !important;
+  box-shadow: 0 12px 32px rgba(2,8,23,.32) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+#hudBottomDock {
+  padding-top: .48rem !important;
+  padding-bottom: max(.62rem, env(safe-area-inset-bottom)) !important;
+  background:
+    linear-gradient(180deg, rgba(8,17,30,.94), rgba(5,11,20,.985)) !important;
+  border-top: 1px solid rgba(125,211,252,.13) !important;
+  box-shadow: 0 -12px 32px rgba(2,8,23,.24) !important;
+  backdrop-filter: blur(18px) saturate(1.15);
+  -webkit-backdrop-filter: blur(18px) saturate(1.15);
+}
+
+#hudBottomDock > button {
+  background: transparent !important;
+  padding-bottom: 0 !important;
+}
+
+#hudBottomDock .booster-face,
+#speedBtnFace {
+  height: 54px !important;
+  border-radius: 13px !important;
+  background: linear-gradient(180deg, rgba(30,46,66,.98), rgba(17,30,48,.98)) !important;
+  border: 1px solid rgba(148,163,184,.16) !important;
+  color: #f8fafc !important;
+  box-shadow:
+    0 7px 18px rgba(2,8,23,.20),
+    0 1px 0 rgba(255,255,255,.04) inset;
+}
+
+#hudBottomDock .booster-face > span:nth-child(2),
+#speedBtnTitle {
+  color: #e2e8f0 !important;
+}
+
+#hudBottomDock button:not(:disabled):active .booster-face,
+#hudBottomDock button:not(:disabled):active #speedBtnFace {
+  transform: translateY(1px) scale(.965);
+  border-color: rgba(34,211,238,.32) !important;
+}
+
+#hudBottomDock button:disabled .booster-face {
+  filter: grayscale(.25) saturate(.65);
+  opacity: .56;
+}
+
+#victoryModal,
+#rescueModal,
+#forecastModal,
+#settingsModal {
+  background: rgba(2, 8, 23, .76) !important;
+  backdrop-filter: blur(14px) saturate(.85);
+  -webkit-backdrop-filter: blur(14px) saturate(.85);
+}
+
+#victoryModal > div,
+#rescueModal > div,
+#forecastModal > div,
+#settingsModal > div {
+  border-color: rgba(125,211,252,.18) !important;
+  background:
+    linear-gradient(180deg, rgba(18,33,53,.98), rgba(8,18,31,.99)) !important;
+  box-shadow:
+    0 32px 90px rgba(0,0,0,.50),
+    0 1px 0 rgba(255,255,255,.045) inset !important;
+}
+
+#victoryModal > div {
+  border-color: rgba(251,191,36,.42) !important;
+}
+
+.btn-3d {
+  transition:
+    transform .12s cubic-bezier(.2,.8,.2,1),
+    filter .14s ease,
+    opacity .14s ease !important;
+}
+
+.btn-3d:hover:not(:disabled) {
+  filter: brightness(1.04);
+}
+
+.btn-3d:active:not(:disabled) {
+  transform: translateY(1px) scale(.975) !important;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--tk-cyan) !important;
+  outline-offset: 2px;
+}
+
+@keyframes tkPlayBreath {
+  0%,100% { transform: translateY(0); filter: drop-shadow(0 0 0 rgba(34,211,238,0)); }
+  50% { transform: translateY(-1px); filter: drop-shadow(0 8px 16px rgba(34,211,238,.10)); }
+}
+
+@media (min-width: 768px) {
+  #appRoot {
+    border-color: rgba(71,85,105,.68) !important;
+    border-radius: 34px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  #hudTopBar {
+    gap: 3px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+  #hudTopBar #hudLevelFace { padding-left: 6px !important; padding-right: 6px !important; }
+  #btnOpenForecast > div { padding-left: 6px !important; padding-right: 6px !important; }
+  #hudBottomDock {
+    gap: 4px !important;
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+  #hudBottomDock .booster-face,
+  #speedBtnFace { height: 50px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
