@@ -87,14 +87,16 @@ jobs:
           apk_dir="android/app/build/outputs/apk/debug"
           mv "$apk_dir/app-debug.apk" "$apk_dir/transit-krama-${version}-debug.apk"
 
-      - name: Verify installable debug APK signature
+      - name: Verify installable debug APK
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         shell: bash
         run: |
           source android/version.properties
           version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose \
-            "android/app/build/outputs/apk/debug/transit-krama-${version}-debug.apk"
+          apk="android/app/build/outputs/apk/debug/transit-krama-${version}-debug.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk" \
+            | grep -q "package: name='com.offline.transitkrama.debug'"
 
       - name: Name signed Android release APK
         if: startsWith(github.ref, 'refs/tags/')
