@@ -54,6 +54,10 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
+            // PR/QA APKs use a separate package so they can coexist with a
+            // production-signed install and never fail on signature mismatch.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
         }
         release {
             isMinifyEnabled = true
