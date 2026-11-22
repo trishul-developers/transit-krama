@@ -26,10 +26,15 @@ assert.ok(!html.includes("styles.css>\\n<link"), "stylesheet tags must not conta
 assert.match(html, /id="gameCanvas"/, "game canvas must exist");
 assert.match(html, /id="hudTopBar"/, "game HUD must exist");
 assert.match(html, /id="hudBottomDock"/, "booster dock must exist");
+assert.match(html, /class="tk-hero-card"/, "visual overhaul v2 home hero must exist");
+assert.match(html, /class="tk-game-hud"/, "visual overhaul v2 command HUD must exist");
+assert.match(html, /class="tk-mini-yard"/, "procedural transit-yard hero must exist");
+assert.ok(!html.includes('id="heroBannerImg" src="data:'), "legacy inline hero art must not remain visible");
+assert.ok(!html.includes("Apache 2.0"), "in-app license labels must match the MIT repository license");
 
 const serviceWorker = read("sw.js");
 assert.match(serviceWorker, /css\/overhaul\.css/, "offline cache must include the overhaul stylesheet");
-assert.match(serviceWorker, /transit-krama-experience-v4/, "offline cache version must be bumped for the overhaul");
+assert.match(serviceWorker, /transit-krama-experience-v5/, "offline cache version must be bumped for the overhaul");
 
 for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
   const ref = match[1];
