@@ -26,6 +26,10 @@ assert.match(html, /id="gameCanvas"/, "game canvas must exist");
 assert.match(html, /id="hudTopBar"/, "game HUD must exist");
 assert.match(html, /id="hudBottomDock"/, "booster dock must exist");
 
+const serviceWorker = read("sw.js");
+assert.match(serviceWorker, /css\/overhaul\.css/, "offline cache must include the overhaul stylesheet");
+assert.match(serviceWorker, /transit-krama-experience-v4/, "offline cache version must be bumped for the overhaul");
+
 for (const match of html.matchAll(/(?:src|href)="([^"]+)"/g)) {
   const ref = match[1];
   if (ref.startsWith("data:") || ref.startsWith("http") || ref.startsWith("#")) continue;
