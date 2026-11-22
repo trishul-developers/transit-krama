@@ -1,4 +1,4 @@
-const CACHE_NAME = "transit-krama-experience-v4";
+const CACHE_NAME = "transit-krama-experience-v5";
 const ASSETS = [
   "./",
   "./index.html",
