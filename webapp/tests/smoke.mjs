@@ -22,6 +22,7 @@ for (const rel of jsFiles) {
 const html = read("index.html");
 assert.match(html, /css\/styles\.css/, "base stylesheet must remain linked");
 assert.match(html, /css\/overhaul\.css/, "overhaul stylesheet must be linked");
+assert.ok(!html.includes("styles.css>\\n<link"), "stylesheet tags must not contain a literal newline escape");
 assert.match(html, /id="gameCanvas"/, "game canvas must exist");
 assert.match(html, /id="hudTopBar"/, "game HUD must exist");
 assert.match(html, /id="hudBottomDock"/, "booster dock must exist");
