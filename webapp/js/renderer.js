@@ -796,6 +796,44 @@ function animStageIsEnRoute(anim) {
   return anim.stage !== "PARKED_IN_BAY" && anim.stage !== "DEPARTING" && anim.stage !== "DEPARTED";
 }
 
+const MOTION_TUNING = Object.freeze({
+  cruiseSpeed: 10.4,
+  parkSpeed: 6.4,
+  departSpeed: 13.2,
+  acceleration: 21.0,
+  braking: 31.0,
+  parkBraking: 37.0,
+  turnRate: 520,
+  departTurnRate: 610,
+  waypointCarrySpeed: 4.2
+});
+
+function approachScalar(current, target, maxDelta) {
+  if (current < target) return Math.min(target, current + maxDelta);
+  if (current > target) return Math.max(target, current - maxDelta);
+  return target;
+}
+
+function getMotionStep(anim, dist, effDt, stage) {
+  const isParking = stage === "PARK_IN_BAY";
+  const isDeparting = stage === "DEPARTING";
+  const maxSpeed = isDeparting
+    ? MOTION_TUNING.departSpeed
+    : (isParking ? MOTION_TUNING.parkSpeed : MOTION_TUNING.cruiseSpeed);
+  const decel = isParking ? MOTION_TUNING.parkBraking : MOTION_TUNING.braking;
+
+  // Target velocity is capped by the speed that can still stop at the waypoint.
+  // This gives every route an acceleration phase and a readable braking phase,
+  // while preserving the deterministic waypoint/collision model.
+  const stopLimitedSpeed = Math.sqrt(Math.max(0, 2 * decel * Math.max(0, dist - 0.025)));
+  const desiredSpeed = Math.min(maxSpeed, Math.max(isParking ? 1.15 : 1.8, stopLimitedSpeed));
+
+  if (!Number.isFinite(anim.speed)) anim.speed = 0;
+  const rate = desiredSpeed >= anim.speed ? MOTION_TUNING.acceleration : decel;
+  anim.speed = approachScalar(anim.speed, desiredSpeed, rate * effDt);
+  return Math.min(dist, anim.speed * effDt);
+}
+
 // ============================================================================
 // 9. MAIN 60FPS PHYSICS & REAL-TIME MULTI-VEHICLE CHOREOGRAPHY LOOP
 // ============================================================================
@@ -875,8 +913,7 @@ function advanceSimulation(dt) {
   // Advance All Simultaneously Moving Vehicles
   const finishedVehs = [];
   movingVehicles.forEach((anim, vehId) => {
-    const driveSpeed = anim.stage === "DEPARTING" ? 20.0 : 15.5;
-    const turnRate = 980;
+    const turnRate = anim.stage === "DEPARTING" ? MOTION_TUNING.departTurnRate : MOTION_TUNING.turnRate;
     anim.exhaustTimer += effDt;
     const logicalVeh = levelState.vehicles[vehId];
 
@@ -895,17 +932,19 @@ function advanceSimulation(dt) {
           if (headingDelta > 180) headingDelta -= 360;
           if (headingDelta < -180) headingDelta += 360;
         }
-        anim.steeringRoll = Math.max(-0.22, Math.min(0.22, headingDelta * 0.025));
+        const targetRoll = Math.max(-0.18, Math.min(0.18, headingDelta * 0.021));
+        anim.steeringRoll += (targetRoll - anim.steeringRoll) * Math.min(1, effDt * 10.5);
 
-        const sp = anim.stage === "PARK_IN_BAY" ? driveSpeed * Math.max(0.48, Math.min(1.0, dist / 1.3)) : driveSpeed;
-        const stepDist = sp * effDt;
+        const stepDist = getMotionStep(anim, dist, effDt, anim.stage);
         if (dist <= stepDist) {
           anim.currentPos = { x: wp.x, y: wp.y };
           anim.waypointIdx++;
+          anim.speed = Math.min(anim.speed || 0, MOTION_TUNING.waypointCarrySpeed);
           if (anim.waypointIdx >= anim.waypoints.length) {
             anim.stage = "PARKED_IN_BAY";
             anim.currentHeading = BAY_TILT_DEG;
             anim.steeringRoll = 0;
+            anim.speed = 0;
             if (logicalVeh && logicalVeh.state === "EN_ROUTE") {
               logicalVeh.state = "IN_BAY";
               const bay = levelState.waitingBays[anim.targetBayIndex];
@@ -969,10 +1008,11 @@ function advanceSimulation(dt) {
           const tAngle = ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
           anim.currentHeading = lerpAngle(anim.currentHeading, tAngle, turnRate * effDt);
         }
-        const stepDist = driveSpeed * effDt;
+        const stepDist = getMotionStep(anim, dist, effDt, "DEPARTING");
         if (dist <= stepDist) {
           anim.currentPos = { x: wp.x, y: wp.y };
           anim.waypointIdx++;
+          anim.speed = Math.min(anim.speed || 0, MOTION_TUNING.waypointCarrySpeed + 1.0);
         } else {
           anim.currentPos.x += (dx / dist) * stepDist;
           anim.currentPos.y += (dy / dist) * stepDist;
@@ -982,7 +1022,7 @@ function advanceSimulation(dt) {
       }
     }
 
-    if ((animStageIsEnRoute(anim) || anim.stage === "DEPARTING") && anim.exhaustTimer >= 0.036) {
+    if ((animStageIsEnRoute(anim) || anim.stage === "DEPARTING") && anim.exhaustTimer >= 0.065) {
       anim.exhaustTimer = 0;
       const rad = (anim.currentHeading * Math.PI) / 180;
       exhaustPuffs.push({
