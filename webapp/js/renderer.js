@@ -246,6 +246,19 @@ function draw3DVolumetricVehicle(c, vehicle, gx, gy, headingDeg, scaleMult, roll
   c.fill();
 
   // Headlights at front (-lPx/2)
+  if (profile.settings.nightMode && !vehicle.isMystery) {
+    const glow = c.createLinearGradient(0, -lPx / 2 - 16 * dpr, 0, -lPx / 2 + 5 * dpr);
+    glow.addColorStop(0, "rgba(254,240,138,0)");
+    glow.addColorStop(1, "rgba(254,240,138,0.22)");
+    c.fillStyle = glow;
+    c.beginPath();
+    c.moveTo(-wPx * 0.34, -lPx / 2 + 2 * dpr);
+    c.lineTo(-wPx * 0.52, -lPx / 2 - 16 * dpr);
+    c.lineTo(wPx * 0.52, -lPx / 2 - 16 * dpr);
+    c.lineTo(wPx * 0.34, -lPx / 2 + 2 * dpr);
+    c.closePath();
+    c.fill();
+  }
   c.fillStyle = "#FEF08A";
   drawRoundedRect(c, -wPx * 0.36, -lPx / 2 + 0.8 * dpr, wPx * 0.20, 2.2 * dpr, 1 * dpr); c.fill();
   drawRoundedRect(c, wPx * 0.16, -lPx / 2 + 0.8 * dpr, wPx * 0.20, 2.2 * dpr, 1 * dpr); c.fill();
@@ -351,8 +364,18 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   const b = islandBounds;
   const sc = viewTransform.scale;
 
-  // 1. Bottom Zone Background: Clean Bright Light-Grey Parking Lot (#E2E7F0)
-  c.fillStyle = night ? "#182235" : "#E2E7F0";
+  // 1. Bottom Zone Background: layered parking-lot light for a miniature diorama feel
+  const lotBg = c.createLinearGradient(0, 0, 0, canvasH);
+  if (night) {
+    lotBg.addColorStop(0, "#16243A");
+    lotBg.addColorStop(0.56, "#1A2A40");
+    lotBg.addColorStop(1, "#101A2A");
+  } else {
+    lotBg.addColorStop(0, "#EFF5F7");
+    lotBg.addColorStop(0.58, "#E4ECEF");
+    lotBg.addColorStop(1, "#CFDADF");
+  }
+  c.fillStyle = lotBg;
   c.fillRect(0, 0, canvasW, canvasH);
 
   // Full-Width Edge-to-Edge Fine Vehicle Area Grid (spans the entire bottom vehicle area cleanly!)
@@ -364,7 +387,7 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   const firstGxPx = centerPt.x - Math.ceil(centerPt.x / gridStepPx) * gridStepPx;
   const firstGyPx = gridTopPx + ((centerPt.y - gridTopPx) % gridStepPx + gridStepPx) % gridStepPx;
 
-  c.strokeStyle = night ? "rgba(51, 65, 85, 0.45)" : "rgba(203, 213, 225, 0.68)";
+  c.strokeStyle = night ? "rgba(71, 85, 105, 0.30)" : "rgba(148, 163, 184, 0.30)";
   c.lineWidth = 1.0 * dpr;
   c.beginPath();
   for (let sx = firstGxPx; sx <= canvasW; sx += gridStepPx) {
@@ -377,7 +400,7 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   }
   c.stroke();
 
-  c.fillStyle = night ? "#334155" : "#94A3B8";
+  c.fillStyle = night ? "rgba(100,116,139,0.58)" : "rgba(100,116,139,0.52)";
   for (let sx = firstGxPx; sx <= canvasW; sx += gridStepPx) {
     for (let sy = firstGyPx; sy <= gridBotPx; sy += gridStepPx) {
       c.beginPath();
@@ -386,13 +409,22 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
     }
   }
 
-  // 2. Top Zone: Lush Green Park & Stadium-Oval Loop Track
+  // 2. Top Zone: landscaped park & stadium-oval loop track
   const parkBottomScreenY = toScreen(0, b.parkBottomY - 0.15).y;
-  c.fillStyle = night ? "#153826" : "#75C94C";
+  const grassBg = c.createLinearGradient(0, 0, 0, Math.max(1, parkBottomScreenY));
+  if (night) {
+    grassBg.addColorStop(0, "#17392C");
+    grassBg.addColorStop(1, "#102C22");
+  } else {
+    grassBg.addColorStop(0, "#7FD55A");
+    grassBg.addColorStop(0.72, "#64BF46");
+    grassBg.addColorStop(1, "#55AE3E");
+  }
+  c.fillStyle = grassBg;
   c.fillRect(0, 0, canvasW, parkBottomScreenY);
 
   // Grass lip / curb above road
-  c.fillStyle = night ? "#0F291C" : "#55A630";
+  c.fillStyle = night ? "#0B261C" : "#479B35";
   c.fillRect(0, parkBottomScreenY - 5 * dpr, canvasW, 5 * dpr);
 
   // Cute Rounded Bushes & Flowers in Left & Right Park Corners
@@ -468,8 +500,29 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   const roadBotY = toScreen(0, b.roadY - 1.34).y;
   const roadH = Math.max(44 * dpr, roadBotY - roadTopY);
 
-  c.fillStyle = night ? "#263147" : "#6E7788";
+  const roadBg = c.createLinearGradient(0, roadTopY, 0, roadBotY);
+  if (night) {
+    roadBg.addColorStop(0, "#344157");
+    roadBg.addColorStop(0.5, "#263247");
+    roadBg.addColorStop(1, "#202A3C");
+  } else {
+    roadBg.addColorStop(0, "#7A8492");
+    roadBg.addColorStop(0.5, "#657080");
+    roadBg.addColorStop(1, "#596372");
+  }
+  c.fillStyle = roadBg;
   c.fillRect(0, roadTopY, canvasW, roadH);
+
+  // Soft lane guidance keeps the transit strip readable without competing with bay outlines.
+  c.save();
+  c.strokeStyle = night ? "rgba(226,232,240,0.16)" : "rgba(248,250,252,0.28)";
+  c.lineWidth = 1.25 * dpr;
+  c.setLineDash([8 * dpr, 10 * dpr]);
+  c.beginPath();
+  c.moveTo(0, roadTopY + roadH * 0.50);
+  c.lineTo(canvasW, roadTopY + roadH * 0.50);
+  c.stroke();
+  c.restore();
 
   // Road top & bottom curbs
   c.fillStyle = night ? "#475569" : "#94A3B8";
