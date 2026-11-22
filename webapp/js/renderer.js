@@ -166,14 +166,29 @@ function draw3DVolumetricVehicle(c, vehicle, gx, gy, headingDeg, scaleMult, roll
   const extrudeY = (cap <= 4 ? 4.0 : 5.0) * dpr;
 
   c.save();
-  // 1. Soft Ground Drop Shadow (offset down-right in screen space)
+  // 1. Layered miniature-vehicle contact shadow + tactical focus halo.
   c.save();
-  c.translate(pt.x + 3.5 * dpr, pt.y + 6.5 * dpr);
+  c.translate(pt.x + 3.8 * dpr, pt.y + 7.2 * dpr);
   c.rotate(((headingDeg + rollDeg) * Math.PI) / 180);
   drawRoundedRect(c, -wPx / 2, -lPx / 2, wPx, lPx, cornerR);
-  c.fillStyle = "rgba(15, 23, 42, 0.24)";
+  c.shadowColor = "rgba(2, 8, 23, 0.46)";
+  c.shadowBlur = 7 * dpr;
+  c.fillStyle = "rgba(2, 8, 23, 0.27)";
   c.fill();
   c.restore();
+
+  if (isHint || isBlocker) {
+    c.save();
+    c.translate(pt.x, pt.y);
+    c.rotate(((headingDeg + rollDeg) * Math.PI) / 180);
+    c.shadowColor = isBlocker ? "rgba(251, 113, 133, 0.72)" : "rgba(34, 211, 238, 0.72)";
+    c.shadowBlur = 16 * dpr;
+    drawRoundedRect(c, -wPx / 2 - 2.5 * dpr, -lPx / 2 - 2.5 * dpr, wPx + 5 * dpr, lPx + 5 * dpr, cornerR + 3 * dpr);
+    c.strokeStyle = isBlocker ? "rgba(251, 113, 133, 0.82)" : "rgba(103, 232, 249, 0.92)";
+    c.lineWidth = 2.2 * dpr;
+    c.stroke();
+    c.restore();
+  }
 
   // 2. 3D Lower Chassis Skirt (shifted down by extrudeY in screen space for true 2.5D/3D depth!)
   c.save();
@@ -212,7 +227,15 @@ function draw3DVolumetricVehicle(c, vehicle, gx, gy, headingDeg, scaleMult, roll
   }
 
   drawRoundedRect(c, -wPx / 2, -lPx / 2, wPx, lPx, cornerR);
-  c.fillStyle = vehicle.isMystery ? "#78716C" : liv.bodyTop;
+  if (vehicle.isMystery) {
+    c.fillStyle = "#78716C";
+  } else {
+    const bodyGradient = c.createLinearGradient(-wPx * 0.55, -lPx * 0.52, wPx * 0.55, lPx * 0.52);
+    bodyGradient.addColorStop(0, liv.roofCap);
+    bodyGradient.addColorStop(0.34, liv.bodyTop);
+    bodyGradient.addColorStop(1, liv.chassisSkirt);
+    c.fillStyle = bodyGradient;
+  }
   c.fill();
   c.lineWidth = 1.8 * dpr;
   c.strokeStyle = vehicle.isMystery ? "#292524" : liv.outline;
@@ -222,7 +245,11 @@ function draw3DVolumetricVehicle(c, vehicle, gx, gy, headingDeg, scaleMult, roll
   const wsW = wPx * 0.76;
   const wsH = Math.min(lPx * 0.16, 10 * dpr);
   drawRoundedRect(c, -wsW / 2, -lPx / 2 + 3.5 * dpr, wsW, wsH, 3 * dpr);
-  c.fillStyle = "#1E293B";
+  const windscreen = c.createLinearGradient(0, -lPx / 2, 0, -lPx / 2 + wsH + 7 * dpr);
+  windscreen.addColorStop(0, "#071827");
+  windscreen.addColorStop(0.55, "#18354c");
+  windscreen.addColorStop(1, "#0b1d2e");
+  c.fillStyle = windscreen;
   c.fill();
   // Cyan windshield reflection glint
   c.strokeStyle = "rgba(147, 197, 253, 0.55)";
@@ -246,6 +273,19 @@ function draw3DVolumetricVehicle(c, vehicle, gx, gy, headingDeg, scaleMult, roll
   c.fill();
 
   // Headlights at front (-lPx/2)
+  if (profile.settings.nightMode && !vehicle.isMystery) {
+    const glow = c.createLinearGradient(0, -lPx / 2 - 16 * dpr, 0, -lPx / 2 + 5 * dpr);
+    glow.addColorStop(0, "rgba(254,240,138,0)");
+    glow.addColorStop(1, "rgba(254,240,138,0.22)");
+    c.fillStyle = glow;
+    c.beginPath();
+    c.moveTo(-wPx * 0.34, -lPx / 2 + 2 * dpr);
+    c.lineTo(-wPx * 0.52, -lPx / 2 - 16 * dpr);
+    c.lineTo(wPx * 0.52, -lPx / 2 - 16 * dpr);
+    c.lineTo(wPx * 0.34, -lPx / 2 + 2 * dpr);
+    c.closePath();
+    c.fill();
+  }
   c.fillStyle = "#FEF08A";
   drawRoundedRect(c, -wPx * 0.36, -lPx / 2 + 0.8 * dpr, wPx * 0.20, 2.2 * dpr, 1 * dpr); c.fill();
   drawRoundedRect(c, wPx * 0.16, -lPx / 2 + 0.8 * dpr, wPx * 0.20, 2.2 * dpr, 1 * dpr); c.fill();
@@ -351,9 +391,41 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   const b = islandBounds;
   const sc = viewTransform.scale;
 
-  // 1. Bottom Zone Background: Clean Bright Light-Grey Parking Lot (#E2E7F0)
-  c.fillStyle = night ? "#182235" : "#E2E7F0";
+  // 1. Bottom Zone Background: cinematic miniature dispatch-yard surface.
+  const lotBg = c.createLinearGradient(0, 0, 0, canvasH);
+  if (night) {
+    lotBg.addColorStop(0, "#112136");
+    lotBg.addColorStop(0.48, "#17283d");
+    lotBg.addColorStop(1, "#0a1422");
+  } else {
+    lotBg.addColorStop(0, "#eef7f7");
+    lotBg.addColorStop(0.48, "#dfeaec");
+    lotBg.addColorStop(1, "#cbd9dc");
+  }
+  c.fillStyle = lotBg;
   c.fillRect(0, 0, canvasW, canvasH);
+
+  const yardGlow = c.createRadialGradient(
+    canvasW * 0.50, canvasH * 0.48, 0,
+    canvasW * 0.50, canvasH * 0.48, canvasW * 0.64
+  );
+  yardGlow.addColorStop(0, night ? "rgba(34,211,238,0.055)" : "rgba(255,255,255,0.36)");
+  yardGlow.addColorStop(0.55, night ? "rgba(37,99,235,0.025)" : "rgba(186,230,253,0.08)");
+  yardGlow.addColorStop(1, "rgba(2,8,23,0)");
+  c.fillStyle = yardGlow;
+  c.fillRect(0, 0, canvasW, canvasH);
+
+  c.save();
+  c.globalAlpha = night ? 0.12 : 0.08;
+  c.strokeStyle = night ? "#67e8f9" : "#0ea5e9";
+  c.lineWidth = 1.1 * dpr;
+  for (let x = -canvasH; x < canvasW + canvasH; x += 94 * dpr) {
+    c.beginPath();
+    c.moveTo(x, canvasH);
+    c.lineTo(x + canvasH * 0.38, 0);
+    c.stroke();
+  }
+  c.restore();
 
   // Full-Width Edge-to-Edge Fine Vehicle Area Grid (spans the entire bottom vehicle area cleanly!)
   const gridStepPx = VEHICLE_GRID_CELL * sc;
@@ -364,7 +436,7 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   const firstGxPx = centerPt.x - Math.ceil(centerPt.x / gridStepPx) * gridStepPx;
   const firstGyPx = gridTopPx + ((centerPt.y - gridTopPx) % gridStepPx + gridStepPx) % gridStepPx;
 
-  c.strokeStyle = night ? "rgba(51, 65, 85, 0.45)" : "rgba(203, 213, 225, 0.68)";
+  c.strokeStyle = night ? "rgba(71, 85, 105, 0.30)" : "rgba(148, 163, 184, 0.30)";
   c.lineWidth = 1.0 * dpr;
   c.beginPath();
   for (let sx = firstGxPx; sx <= canvasW; sx += gridStepPx) {
@@ -377,7 +449,7 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   }
   c.stroke();
 
-  c.fillStyle = night ? "#334155" : "#94A3B8";
+  c.fillStyle = night ? "rgba(100,116,139,0.58)" : "rgba(100,116,139,0.52)";
   for (let sx = firstGxPx; sx <= canvasW; sx += gridStepPx) {
     for (let sy = firstGyPx; sy <= gridBotPx; sy += gridStepPx) {
       c.beginPath();
@@ -386,13 +458,22 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
     }
   }
 
-  // 2. Top Zone: Lush Green Park & Stadium-Oval Loop Track
+  // 2. Top Zone: landscaped park & stadium-oval loop track
   const parkBottomScreenY = toScreen(0, b.parkBottomY - 0.15).y;
-  c.fillStyle = night ? "#153826" : "#75C94C";
+  const grassBg = c.createLinearGradient(0, 0, 0, Math.max(1, parkBottomScreenY));
+  if (night) {
+    grassBg.addColorStop(0, "#17392C");
+    grassBg.addColorStop(1, "#102C22");
+  } else {
+    grassBg.addColorStop(0, "#7FD55A");
+    grassBg.addColorStop(0.72, "#64BF46");
+    grassBg.addColorStop(1, "#55AE3E");
+  }
+  c.fillStyle = grassBg;
   c.fillRect(0, 0, canvasW, parkBottomScreenY);
 
   // Grass lip / curb above road
-  c.fillStyle = night ? "#0F291C" : "#55A630";
+  c.fillStyle = night ? "#0B261C" : "#479B35";
   c.fillRect(0, parkBottomScreenY - 5 * dpr, canvasW, 5 * dpr);
 
   // Cute Rounded Bushes & Flowers in Left & Right Park Corners
@@ -468,13 +549,59 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
   const roadBotY = toScreen(0, b.roadY - 1.34).y;
   const roadH = Math.max(44 * dpr, roadBotY - roadTopY);
 
-  c.fillStyle = night ? "#263147" : "#6E7788";
+  const roadBg = c.createLinearGradient(0, roadTopY, 0, roadBotY);
+  if (night) {
+    roadBg.addColorStop(0, "#344157");
+    roadBg.addColorStop(0.5, "#263247");
+    roadBg.addColorStop(1, "#202A3C");
+  } else {
+    roadBg.addColorStop(0, "#7A8492");
+    roadBg.addColorStop(0.5, "#657080");
+    roadBg.addColorStop(1, "#596372");
+  }
+  c.fillStyle = roadBg;
   c.fillRect(0, roadTopY, canvasW, roadH);
+
+  // Soft lane guidance keeps the transit strip readable without competing with bay outlines.
+  c.save();
+  c.strokeStyle = night ? "rgba(226,232,240,0.16)" : "rgba(248,250,252,0.28)";
+  c.lineWidth = 1.25 * dpr;
+  c.setLineDash([8 * dpr, 10 * dpr]);
+  c.beginPath();
+  c.moveTo(0, roadTopY + roadH * 0.50);
+  c.lineTo(canvasW, roadTopY + roadH * 0.50);
+  c.stroke();
+  c.restore();
 
   // Road top & bottom curbs
   c.fillStyle = night ? "#475569" : "#94A3B8";
   c.fillRect(0, roadTopY, canvasW, 3.5 * dpr);
   c.fillRect(0, roadBotY - 3.5 * dpr, canvasW, 3.5 * dpr);
+
+  // High-contrast boarding crosswalk and dispatch-direction glyph.
+  c.save();
+  const crossingW = Math.min(trackPx * 1.05, 74 * dpr);
+  const crossingLeft = gatePt.x - crossingW / 2;
+  const crossingTop = roadTopY + roadH * 0.14;
+  const crossingBottom = roadTopY + roadH * 0.86;
+  const crossingH = crossingBottom - crossingTop;
+  c.globalAlpha = night ? 0.26 : 0.44;
+  c.fillStyle = "#f8fafc";
+  for (let i = 0; i < 6; i++) {
+    const stripeW = crossingW / 11;
+    c.fillRect(crossingLeft + i * stripeW * 2, crossingTop, stripeW, crossingH);
+  }
+  c.globalAlpha = night ? 0.42 : 0.62;
+  c.strokeStyle = "#e0f2fe";
+  c.lineWidth = 1.7 * dpr;
+  c.beginPath();
+  c.moveTo(gatePt.x, roadBotY - 10 * dpr);
+  c.lineTo(gatePt.x, roadTopY + 14 * dpr);
+  c.lineTo(gatePt.x - 5 * dpr, roadTopY + 20 * dpr);
+  c.moveTo(gatePt.x, roadTopY + 14 * dpr);
+  c.lineTo(gatePt.x + 5 * dpr, roadTopY + 20 * dpr);
+  c.stroke();
+  c.restore();
 
   // Draw 8 Wide, Coherent Angled Waiting Bays spanning across the full road width!
   const usableW = Math.max((b.right - b.left) + 2.85, 10.08);
@@ -542,6 +669,12 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
       c.font = `800 ${Math.round(7.5 * dpr)}px Inter, sans-serif`;
       c.fillStyle = "#BBF7D0";
       c.fillText("150$", 0, 6 * dpr);
+    } else {
+      c.fillStyle = night ? "rgba(226,232,240,0.30)" : "rgba(248,250,252,0.55)";
+      c.font = `800 ${Math.round(6.5 * dpr)}px Inter, sans-serif`;
+      c.textAlign = "center";
+      c.textBaseline = "middle";
+      c.fillText(String(bay.index + 1).padStart(2, "0"), 0, stallH * 0.34);
     }
     c.restore();
   });
@@ -698,10 +831,39 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
       scaleMult *= 1.0 + 0.11 * Math.sin(p * Math.PI);
     }
 
-    renderList.push({ v, gx, gy, headingDeg, scaleMult, rollDeg });
+    renderList.push({
+      v, gx, gy, headingDeg, scaleMult, rollDeg,
+      motionSpeed: anim && Number.isFinite(anim.speed) ? anim.speed : 0,
+      motionStage: anim ? anim.stage : null
+    });
   });
 
   renderList.sort((a, bItem) => bItem.gy - a.gy);
+
+  // Motion light trails make active dispatches readable without changing path geometry.
+  renderList.forEach(item => {
+    if (item.motionSpeed < 2.4 || item.motionStage === "PARKED_IN_BAY") return;
+    const pt = toScreen(item.gx, item.gy);
+    const rad = (item.headingDeg * Math.PI) / 180;
+    const liv = LIVERY_PALETTE[item.v.color] || LIVERY_PALETTE.BLUE;
+    const tail = Math.min(32 * dpr, (10 + item.motionSpeed * 1.7) * dpr);
+    const x2 = pt.x - Math.sin(rad) * tail;
+    const y2 = pt.y - Math.cos(rad) * tail;
+    const trail = c.createLinearGradient(pt.x, pt.y, x2, y2);
+    trail.addColorStop(0, liv.roofCap);
+    trail.addColorStop(1, "rgba(255,255,255,0)");
+    c.save();
+    c.globalAlpha = night ? 0.46 : 0.28;
+    c.strokeStyle = trail;
+    c.lineWidth = 3.2 * dpr;
+    c.lineCap = "round";
+    c.beginPath();
+    c.moveTo(pt.x, pt.y);
+    c.lineTo(x2, y2);
+    c.stroke();
+    c.restore();
+  });
+
   renderList.forEach(item => {
     const isHint = item.v.id === hintVehicleId;
     const isBlocker = (inspectRaycast && inspectRaycast.firstBlocker && inspectRaycast.firstBlocker.id === item.v.id) ||
@@ -790,10 +952,59 @@ function renderScene(c = ctx, canvasW = gameCanvas ? gameCanvas.width : 860, can
     c.fillRect(-4.5 * dpr, -2.5 * dpr, 9 * dpr, 5 * dpr);
     c.restore();
   });
+
+  // Final optical vignette unifies the miniature board and keeps focus toward the playfield center.
+  const vignette = c.createRadialGradient(
+    canvasW * 0.50, canvasH * 0.48, canvasW * 0.22,
+    canvasW * 0.50, canvasH * 0.48, canvasW * 0.76
+  );
+  vignette.addColorStop(0, "rgba(2,8,23,0)");
+  vignette.addColorStop(0.72, night ? "rgba(2,8,23,0.035)" : "rgba(2,8,23,0.018)");
+  vignette.addColorStop(1, night ? "rgba(2,8,23,0.18)" : "rgba(2,8,23,0.10)");
+  c.fillStyle = vignette;
+  c.fillRect(0, 0, canvasW, canvasH);
 }
 
 function animStageIsEnRoute(anim) {
   return anim.stage !== "PARKED_IN_BAY" && anim.stage !== "DEPARTING" && anim.stage !== "DEPARTED";
+}
+
+const MOTION_TUNING = Object.freeze({
+  cruiseSpeed: 10.4,
+  parkSpeed: 6.4,
+  departSpeed: 13.2,
+  acceleration: 21.0,
+  braking: 31.0,
+  parkBraking: 37.0,
+  turnRate: 520,
+  departTurnRate: 610,
+  waypointCarrySpeed: 4.2
+});
+
+function approachScalar(current, target, maxDelta) {
+  if (current < target) return Math.min(target, current + maxDelta);
+  if (current > target) return Math.max(target, current - maxDelta);
+  return target;
+}
+
+function getMotionStep(anim, dist, effDt, stage) {
+  const isParking = stage === "PARK_IN_BAY";
+  const isDeparting = stage === "DEPARTING";
+  const maxSpeed = isDeparting
+    ? MOTION_TUNING.departSpeed
+    : (isParking ? MOTION_TUNING.parkSpeed : MOTION_TUNING.cruiseSpeed);
+  const decel = isParking ? MOTION_TUNING.parkBraking : MOTION_TUNING.braking;
+
+  // Target velocity is capped by the speed that can still stop at the waypoint.
+  // This gives every route an acceleration phase and a readable braking phase,
+  // while preserving the deterministic waypoint/collision model.
+  const stopLimitedSpeed = Math.sqrt(Math.max(0, 2 * decel * Math.max(0, dist - 0.025)));
+  const desiredSpeed = Math.min(maxSpeed, Math.max(isParking ? 1.15 : 1.8, stopLimitedSpeed));
+
+  if (!Number.isFinite(anim.speed)) anim.speed = 0;
+  const rate = desiredSpeed >= anim.speed ? MOTION_TUNING.acceleration : decel;
+  anim.speed = approachScalar(anim.speed, desiredSpeed, rate * effDt);
+  return Math.min(dist, anim.speed * effDt);
 }
 
 // ============================================================================
@@ -875,8 +1086,7 @@ function advanceSimulation(dt) {
   // Advance All Simultaneously Moving Vehicles
   const finishedVehs = [];
   movingVehicles.forEach((anim, vehId) => {
-    const driveSpeed = anim.stage === "DEPARTING" ? 20.0 : 15.5;
-    const turnRate = 980;
+    const turnRate = anim.stage === "DEPARTING" ? MOTION_TUNING.departTurnRate : MOTION_TUNING.turnRate;
     anim.exhaustTimer += effDt;
     const logicalVeh = levelState.vehicles[vehId];
 
@@ -895,17 +1105,19 @@ function advanceSimulation(dt) {
           if (headingDelta > 180) headingDelta -= 360;
           if (headingDelta < -180) headingDelta += 360;
         }
-        anim.steeringRoll = Math.max(-0.22, Math.min(0.22, headingDelta * 0.025));
+        const targetRoll = Math.max(-0.18, Math.min(0.18, headingDelta * 0.021));
+        anim.steeringRoll += (targetRoll - anim.steeringRoll) * Math.min(1, effDt * 10.5);
 
-        const sp = anim.stage === "PARK_IN_BAY" ? driveSpeed * Math.max(0.48, Math.min(1.0, dist / 1.3)) : driveSpeed;
-        const stepDist = sp * effDt;
+        const stepDist = getMotionStep(anim, dist, effDt, anim.stage);
         if (dist <= stepDist) {
           anim.currentPos = { x: wp.x, y: wp.y };
           anim.waypointIdx++;
+          anim.speed = Math.min(anim.speed || 0, MOTION_TUNING.waypointCarrySpeed);
           if (anim.waypointIdx >= anim.waypoints.length) {
             anim.stage = "PARKED_IN_BAY";
             anim.currentHeading = BAY_TILT_DEG;
             anim.steeringRoll = 0;
+            anim.speed = 0;
             if (logicalVeh && logicalVeh.state === "EN_ROUTE") {
               logicalVeh.state = "IN_BAY";
               const bay = levelState.waitingBays[anim.targetBayIndex];
@@ -969,10 +1181,11 @@ function advanceSimulation(dt) {
           const tAngle = ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
           anim.currentHeading = lerpAngle(anim.currentHeading, tAngle, turnRate * effDt);
         }
-        const stepDist = driveSpeed * effDt;
+        const stepDist = getMotionStep(anim, dist, effDt, "DEPARTING");
         if (dist <= stepDist) {
           anim.currentPos = { x: wp.x, y: wp.y };
           anim.waypointIdx++;
+          anim.speed = Math.min(anim.speed || 0, MOTION_TUNING.waypointCarrySpeed + 1.0);
         } else {
           anim.currentPos.x += (dx / dist) * stepDist;
           anim.currentPos.y += (dy / dist) * stepDist;
@@ -982,7 +1195,7 @@ function advanceSimulation(dt) {
       }
     }
 
-    if ((animStageIsEnRoute(anim) || anim.stage === "DEPARTING") && anim.exhaustTimer >= 0.036) {
+    if ((animStageIsEnRoute(anim) || anim.stage === "DEPARTING") && anim.exhaustTimer >= 0.065) {
       anim.exhaustTimer = 0;
       const rad = (anim.currentHeading * Math.PI) / 180;
       exhaustPuffs.push({

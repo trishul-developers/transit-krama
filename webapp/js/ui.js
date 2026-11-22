@@ -36,17 +36,33 @@ function findHitVehicle(gx, gy) {
 let pointerDownPos = null;
 let pressedVehicleId = null;
 let pressedLockedBayIndex = null;
+let activePointerId = null;
+
+function clearPointerInteraction() {
+  pointerDownPos = null;
+  pressedVehicleId = null;
+  pressedLockedBayIndex = null;
+  activePointerId = null;
+  inspectedVehicleId = null;
+  inspectRaycast = null;
+  if (gameCanvas) gameCanvas.style.cursor = "pointer";
+}
 
 if (gameCanvas) {
   gameCanvas.addEventListener("pointerdown", e => {
+    if (activePointerId !== null) return;
+    activePointerId = e.pointerId;
+    try { gameCanvas.setPointerCapture(e.pointerId); } catch (_) {}
+
     const rect = gameCanvas.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * dpr;
     const sy = (e.clientY - rect.top) * dpr;
-    pointerDownPos = { x: e.clientX, y: e.clientY };
+    pointerDownPos = { x: e.clientX, y: e.clientY, pointerType: e.pointerType };
     const { gx, gy } = toWorld(sx, sy);
     const hitBay = findHitLockedBay(gx, gy);
     if (hitBay) {
       pressedLockedBayIndex = hitBay.index;
+      gameCanvas.style.cursor = "grabbing";
       return;
     }
     const hit = findHitVehicle(gx, gy);
@@ -54,35 +70,48 @@ if (gameCanvas) {
       pressedVehicleId = hit.id;
       inspectedVehicleId = hit.id;
       inspectRaycast = checkRaycast(levelState, hit.id);
+      gameCanvas.style.cursor = "grabbing";
     }
   });
 
   gameCanvas.addEventListener("pointermove", e => {
+    if (activePointerId !== null && e.pointerId !== activePointerId) return;
     const rect = gameCanvas.getBoundingClientRect();
     const sx = (e.clientX - rect.left) * dpr;
     const sy = (e.clientY - rect.top) * dpr;
     const { gx, gy } = toWorld(sx, sy);
     const hit = findHitVehicle(gx, gy);
+
+    if (pointerDownPos) {
+      const dragDist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+      const cancelThreshold = pointerDownPos.pointerType === "touch" ? 24 : 14;
+      if (dragDist > cancelThreshold) {
+        pressedVehicleId = null;
+        pressedLockedBayIndex = null;
+      }
+    }
+
     if (hit) {
       inspectedVehicleId = hit.id;
       inspectRaycast = checkRaycast(levelState, hit.id);
+      if (!pointerDownPos) gameCanvas.style.cursor = "pointer";
     } else if (!pressedVehicleId) {
       inspectedVehicleId = null;
       inspectRaycast = null;
+      if (!pointerDownPos) gameCanvas.style.cursor = "default";
     }
   });
 
   gameCanvas.addEventListener("pointerup", e => {
+    if (activePointerId !== null && e.pointerId !== activePointerId) return;
     const hitId = pressedVehicleId;
     const hitBayIdx = pressedLockedBayIndex;
-    pressedVehicleId = null;
-    pressedLockedBayIndex = null;
-    inspectedVehicleId = null;
-    inspectRaycast = null;
+    const down = pointerDownPos;
 
-    if (pointerDownPos) {
-      const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
-      if (dist <= 40) {
+    if (down) {
+      const dist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+      const tapThreshold = down.pointerType === "touch" ? 24 : 14;
+      if (dist <= tapThreshold) {
         if (hitBayIdx !== null) {
           doPowerUpVipBay(hitBayIdx);
         } else if (hitId) {
@@ -90,7 +119,21 @@ if (gameCanvas) {
         }
       }
     }
-    pointerDownPos = null;
+
+    try { gameCanvas.releasePointerCapture(e.pointerId); } catch (_) {}
+    clearPointerInteraction();
+  });
+
+  gameCanvas.addEventListener("pointercancel", clearPointerInteraction);
+  gameCanvas.addEventListener("lostpointercapture", () => {
+    if (activePointerId !== null) clearPointerInteraction();
+  });
+  gameCanvas.addEventListener("pointerleave", () => {
+    if (activePointerId === null) {
+      inspectedVehicleId = null;
+      inspectRaycast = null;
+      gameCanvas.style.cursor = "default";
+    }
   });
 }
 
@@ -228,17 +271,10 @@ function updateGameHud() {
   const speedFace = document.getElementById("speedBtnFace");
   const speedBadge = document.getElementById("speedBtnBadge");
   const speedTitle = document.getElementById("speedBtnTitle");
-  if (isFastForward) {
-    speedFace.className = "bg-emerald-500 border border-emerald-300 rounded-[9px] h-[52px] flex flex-col items-center justify-between py-1 px-1";
-    speedTitle.className = "text-[9px] font-extrabold text-white leading-none";
-    speedBadge.className = "px-1.5 py-[1px] rounded bg-emerald-800 text-[8.5px] font-black text-white";
-    speedBadge.textContent = "3x";
-  } else {
-    speedFace.className = "bg-slate-50 border border-slate-200 rounded-[9px] h-[52px] flex flex-col items-center justify-between py-1 px-1";
-    speedTitle.className = "text-[9px] font-extrabold text-slate-800 leading-none";
-    speedBadge.className = "px-1.5 py-[1px] rounded bg-sky-100 text-[8.5px] font-black text-sky-700";
-    speedBadge.textContent = "1x";
-  }
+  speedFace.classList.toggle("is-fast", isFastForward);
+  speedBadge.classList.toggle("is-fast", isFastForward);
+  speedTitle.classList.toggle("is-fast", isFastForward);
+  speedBadge.textContent = isFastForward ? "3x" : "1x";
 }
 
 function openForecastModal() {

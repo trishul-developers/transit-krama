@@ -1,8 +1,9 @@
-const CACHE_NAME = "transit-krama-modular-v3";
+const CACHE_NAME = "transit-krama-experience-v5";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/styles.css",
+  "./css/overhaul.css",
   "./js/levels.js",
   "./js/audio.js",
   "./js/engine.js",

@@ -18,6 +18,14 @@ jobs:
       - name: Check out source
         uses: actions/checkout@v7
 
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+
+      - name: Run web game smoke tests
+        run: node webapp/tests/smoke.mjs
+
       - name: Set up Java
         uses: actions/setup-java@v6
         with:
@@ -55,10 +63,10 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/transit-krama-upload.jks"
           test -s "$RUNNER_TEMP/transit-krama-upload.jks"
 
-      - name: Run Android unit tests and build release APK
+      - name: Run Android unit tests and build test APKs
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         working-directory: android
-        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+        run: ./gradlew --no-daemon testReleaseUnitTest assembleDebug assembleRelease
 
       - name: Run Android unit tests and build signed release APK
         if: startsWith(github.ref, 'refs/tags/')
@@ -70,20 +78,46 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
 
-      - name: Name Android release APK
+      - name: Name installable debug APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
+        run: |
+          source android/version.properties
+          version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+          apk_dir="android/app/build/outputs/apk/debug"
+          mv "$apk_dir/app-debug.apk" "$apk_dir/transit-krama-${version}-overhaul-v2-debug.apk"
+
+      - name: Verify installable debug APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
+        run: |
+          source android/version.properties
+          version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+          apk="android/app/build/outputs/apk/debug/transit-krama-${version}-overhaul-v2-debug.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk")"
+          printf '%s\n' "$badging" | grep -q "package: name='com.offline.transitkrama.debug'"
+          printf '%s\n' "$badging" | grep -q "application-label:'Transit Krama QA v2'"
+
+          # Verify the APK itself — not just the checkout — contains Visual Overhaul v2.
+          unzip -p "$apk" assets/index.html | grep -q "TRANSIT CONTROL"
+          unzip -p "$apk" assets/index.html | grep -q 'class="tk-game-hud"'
+          unzip -p "$apk" assets/css/overhaul.css | grep -q "Transit Krama Experience Overhaul v2"
+
+      - name: Name signed Android release APK
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           source android/version.properties
           version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
           apk_dir="android/app/build/outputs/apk/release"
-          if [ -f "$apk_dir/app-release.apk" ]; then
-            source_apk="$apk_dir/app-release.apk"
-          else
-            source_apk="$apk_dir/app-release-unsigned.apk"
-          fi
-          mv "$source_apk" "$apk_dir/transit-krama-${version}-release.apk"
+          test -f "$apk_dir/app-release.apk" || {
+            echo "Signed release APK was not produced" >&2
+            exit 1
+          }
+          mv "$apk_dir/app-release.apk" "$apk_dir/transit-krama-${version}-release.apk"
 
-      - name: Verify signed APK
+      - name: Verify signed release APK
         if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
@@ -107,8 +141,9 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: transit-krama-${{ github.ref_name }}
+          name: transit-krama-build-${{ github.run_id }}
           path: |
+            android/app/build/outputs/apk/debug/transit-krama-*-overhaul-v2-debug.apk
             android/app/build/outputs/apk/release/transit-krama-*-release.apk
             transit-krama-webapp-*.zip
           if-no-files-found: error

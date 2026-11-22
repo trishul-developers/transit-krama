@@ -685,8 +685,8 @@ function onVehicleTap(vehicleId) {
       x: v.anchorX + fx * lungeDist,
       y: v.anchorY + fy * lungeDist
     };
-    const speed = 10.5;
-    const lungeDur = Math.max(0.07, Math.min(0.20, lungeDist / speed));
+    const speed = 7.2;
+    const lungeDur = Math.max(0.09, Math.min(0.26, lungeDist / speed));
 
     blockedBonks.set(vehicleId, {
       vehicleId,
