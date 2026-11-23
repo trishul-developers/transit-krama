@@ -81,8 +81,8 @@ jobs:
           apk="$apk_dir/transit-krama-${version}-native-debug.apk"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
           badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk")"
-          printf '%s\n' "$badging" | grep -q "package: name=\'com.offline.transitkrama.native\'"
-          printf '%s\n' "$badging" | grep -q "application-label:\'Transit Krama Native QA\'"
+          printf '%s\n' "$badging" | grep -q "package: name='com.offline.transitkrama.native'"
+          printf '%s\n' "$badging" | grep -q "application-label:'Transit Krama Native QA'"
           if unzip -l "$apk" | grep -q "assets/index.html"; then
             echo "WebView assets leaked into native APK" >&2
             exit 1
