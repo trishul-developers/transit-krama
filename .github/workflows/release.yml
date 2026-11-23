@@ -55,10 +55,10 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/transit-krama-upload.jks"
           test -s "$RUNNER_TEMP/transit-krama-upload.jks"
 
-      - name: Run Android unit tests and build release APK
+      - name: Run native game tests and build QA APK
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         working-directory: android
-        run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
 
       - name: Run Android unit tests and build signed release APK
         if: startsWith(github.ref, 'refs/tags/')
@@ -70,18 +70,33 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon testReleaseUnitTest assembleRelease
 
-      - name: Name Android release APK
+      - name: Name and verify native QA APK
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        shell: bash
+        run: |
+          source android/version.properties
+          version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
+          apk_dir="android/app/build/outputs/apk/debug"
+          mv "$apk_dir/app-debug.apk" "$apk_dir/transit-krama-${version}-native-debug.apk"
+          apk="$apk_dir/transit-krama-${version}-native-debug.apk"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$apk"
+          badging="$("$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$apk")"
+          printf '%s\n' "$badging" | grep -q "package: name=\'com.offline.transitkrama.native\'"
+          printf '%s\n' "$badging" | grep -q "application-label:\'Transit Krama Native QA\'"
+          if unzip -l "$apk" | grep -q "assets/index.html"; then
+            echo "WebView assets leaked into native APK" >&2
+            exit 1
+          fi
+
+      - name: Name signed Android release APK
+        if: startsWith(github.ref, 'refs/tags/')
         shell: bash
         run: |
           source android/version.properties
           version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
           apk_dir="android/app/build/outputs/apk/release"
-          if [ -f "$apk_dir/app-release.apk" ]; then
-            source_apk="$apk_dir/app-release.apk"
-          else
-            source_apk="$apk_dir/app-release-unsigned.apk"
-          fi
-          mv "$source_apk" "$apk_dir/transit-krama-${version}-release.apk"
+          test -f "$apk_dir/app-release.apk" || { echo "Signed release APK missing" >&2; exit 1; }
+          mv "$apk_dir/app-release.apk" "$apk_dir/transit-krama-${version}-release.apk"
 
       - name: Verify signed APK
         if: startsWith(github.ref, 'refs/tags/')
@@ -97,20 +112,13 @@ jobs:
         shell: bash
         run: rm -f "$RUNNER_TEMP/transit-krama-upload.jks"
 
-      - name: Package web app
-        shell: bash
-        run: |
-          source android/version.properties
-          version="${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}"
-          zip -r "transit-krama-webapp-${version}.zip" webapp
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: transit-krama-${{ github.ref_name }}
+          name: transit-krama-native-${{ github.run_id }}
           path: |
+            android/app/build/outputs/apk/debug/transit-krama-*-native-debug.apk
             android/app/build/outputs/apk/release/transit-krama-*-release.apk
-            transit-krama-webapp-*.zip
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -120,4 +128,3 @@ jobs:
           generate_release_notes: true
           files: |
             android/app/build/outputs/apk/release/transit-krama-*-release.apk
-            transit-krama-webapp-*.zip
