@@ -26,7 +26,7 @@ require(signingValues.all { it == null } || signingValues.all { !it.isNullOrBlan
 val hasReleaseSigning = signingValues.all { !it.isNullOrBlank() }
 
 android {
-    namespace = "com.offline.busjam"
+    namespace = "com.trishul.transitkrama"
     compileSdk = 35
 
     defaultConfig {
@@ -35,10 +35,8 @@ android {
         targetSdk = 35
         versionCode = computedVersionCode
         versionName = computedVersionName
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
-
-    // The web app is the single source of truth for both the browser and WebView builds.
-    sourceSets.getByName("main").assets.srcDir("../../webapp")
 
     signingConfigs {
         if (hasReleaseSigning) {
@@ -54,6 +52,8 @@ android {
     buildTypes {
         debug {
             isDebuggable = true
+            applicationIdSuffix = ".native"
+            versionNameSuffix = "-native"
         }
         release {
             isMinifyEnabled = true
@@ -78,5 +78,5 @@ android {
 }
 
 dependencies {
-    implementation("androidx.webkit:webkit:1.12.1")
+    testImplementation("junit:junit:4.13.2")
 }
