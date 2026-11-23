@@ -40,6 +40,9 @@ class TransitGameView(context: Context) : View(context) {
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
     private val path = Path()
     private val temp = RectF()
+    private val movesRect = RectF()
+    private val regularTypeface = Typeface.create("sans-serif", Typeface.NORMAL)
+    private val boldTypeface = Typeface.create("sans-serif", Typeface.BOLD)
     private val prefs = context.getSharedPreferences("transit_krama_native", Context.MODE_PRIVATE)
 
     private var screen = Screen.HOME
@@ -301,16 +304,19 @@ class TransitGameView(context: Context) : View(context) {
         text(canvas, "PASSENGER FLOW", 16f * d, top + 10f * d, 7f * d, Color.rgb(100, 116, 139), true, Paint.Align.LEFT)
         text(canvas, engine.passengerQueue.size.toString() + " LEFT", width - 16f * d, top + 10f * d, 7f * d, Color.rgb(148, 163, 184), true, Paint.Align.RIGHT)
 
-        val preview = engine.passengerQueue.take(12)
         val gap = 4f * d
         val dot = min(22f * d, (width - 32f * d - gap * 11f) / 12f)
         var x = 16f * d
         val y = top + 27f * d
-        preview.forEach { color ->
+        var previewCount = 0
+        val queueIterator = engine.passengerQueue.iterator()
+        while (queueIterator.hasNext() && previewCount < 12) {
+            val color = queueIterator.next()
             temp.set(x, y, x + dot, y + 17f * d)
             paint.color = colorInt(color)
             canvas.drawRoundRect(temp, 7f * d, 7f * d, paint)
             x += dot + gap
+            previewCount += 1
         }
 
         temp.set(16f * d, top + 50f * d, width - 16f * d, top + 54f * d)
@@ -343,7 +349,8 @@ class TransitGameView(context: Context) : View(context) {
         }
 
         val now = System.nanoTime()
-        engine.vehicles.filter { it.state == VehicleState.PARKED }.forEach { vehicle ->
+        for (vehicle in engine.vehicles) {
+            if (vehicle.state != VehicleState.PARKED) continue
             val cx = boardLeft + (vehicle.x + .5f) * cell
             val cy = boardTop + (vehicle.y + .5f) * cell
             drawVehicle(
@@ -401,14 +408,11 @@ class TransitGameView(context: Context) : View(context) {
         val w = (width - 32f * d - gap * 2f) / 3f
         undoRect.set(16f * d, top, 16f * d + w, bottom)
         hintRect.set(undoRect.right + gap, top, undoRect.right + gap + w, bottom)
-        temp.set(hintRect.right + gap, top, width - 16f * d, bottom)
-        val movesLeft = temp.left
-        val movesRight = temp.right
-        val movesCenter = temp.centerX()
+        movesRect.set(hintRect.right + gap, top, width - 16f * d, bottom)
+        val movesCenter = movesRect.centerX()
 
         drawButton(canvas, undoRect, Color.rgb(17, 35, 51))
         drawButton(canvas, hintRect, Color.rgb(17, 35, 51))
-        val movesRect = RectF(movesLeft, top, movesRight, bottom)
         drawButton(canvas, movesRect, Color.rgb(10, 26, 38))
 
         text(canvas, "UNDO", undoRect.centerX(), undoRect.centerY() + 4f * d, 9f * d, if (engine.canUndo()) Color.WHITE else Color.rgb(71, 85, 105), true, Paint.Align.CENTER)
@@ -519,7 +523,7 @@ class TransitGameView(context: Context) : View(context) {
         paint.color = color
         paint.textSize = size
         paint.textAlign = align
-        paint.typeface = Typeface.create("sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
+        paint.typeface = if (bold) boldTypeface else regularTypeface
         canvas.drawText(value, x, y, paint)
     }
 
